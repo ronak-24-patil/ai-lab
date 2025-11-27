@@ -1,0 +1,680 @@
+Practical 1 : 8 Puzzle using BFS
+
+import numpy as np
+import pandas as pd
+import os
+
+def bfs(src,target):
+    queue = []
+    queue.append(src)
+
+    exp = []
+
+    while len(queue) > 0:
+        source = queue.pop(0)
+        exp.append(source)
+
+        print(source)
+
+        if source==target:
+            print("success")
+            return
+
+        poss_moves_to_do = []
+        poss_moves_to_do = possible_moves(source,exp)
+
+        for move in poss_moves_to_do:
+
+            if move not in exp and move not in queue:
+                queue.append(move)
+def possible_moves(state,visited_states):
+    #index of empty spot
+    b = state.index(0)
+
+    #directions array
+    d = []
+    #Add all the possible directions
+
+    if b not in [0,1,2]:
+        d.append('u')
+    if b not in [6,7,8]:
+        d.append('d')
+    if b not in [0,3,6]:
+        d.append('l')
+    if b not in [2,5,8]:
+        d.append('r')
+
+
+    # If direction is possible then add state to move
+    pos_moves_it_can = []
+
+    # for all possible directions find the state if that move is played
+    ### Jump to gen function to generate all possible moves in the given directions
+
+    for i in d:
+        pos_moves_it_can.append(gen(state,i,b))
+
+    return [move_it_can for move_it_can in pos_moves_it_can if move_it_can not in visited_states]
+def gen(state, m, b):
+    temp = state.copy()
+
+    if m=='d':
+        temp[b+3],temp[b] = temp[b],temp[b+3]
+
+    if m=='u':
+        temp[b-3],temp[b] = temp[b],temp[b-3]
+
+    if m=='l':
+        temp[b-1],temp[b] = temp[b],temp[b-1]
+
+    if m=='r':
+        temp[b+1],temp[b] = temp[b],temp[b+1]
+
+
+    # return new state with tested move to later check if "src == target"
+    return temp
+src = [1,2,3,4,5,6,0,7,8]
+target = [1,2,3,4,5,6,7,8,0]
+bfs(src, target)
+
+src = [1,0,3,4,2,6,7,5,8]
+target = [1,2,3,4,5,6,7,8,0]
+bfs(src, target)
+--------------------------------------------------------------------------------------------------------------
+Practical 2 : Travelling Salesman problem
+
+# Number of cities
+n = 4
+min_cost = float('inf')  # To store minimum cost (floating-point representation of infinity.)
+			# it starts off as the largest possible number.
+min_path = []            # To store the path with minimum cost
+
+def tsp(graph, visited, currPos, count, cost, path):
+    global min_cost, min_path
+
+    # Base case: all cities visited and return path to start exists
+    if count == n and graph[currPos][0]:
+        total_cost = cost + graph[currPos][0]
+        if total_cost < min_cost:
+            min_cost = total_cost
+            min_path = path + [0]  # Add start city to complete the cycle
+        return
+
+    # Try next cities
+    for i in range(n):
+        if not visited[i] and graph[currPos][i] != 0:
+            visited[i] = True
+            tsp(graph, visited, i, count + 1, cost + graph[currPos][i], path + [i])
+            visited[i] = False  # Backtrack
+
+# Input graph (distance matrix)
+graph = [
+    [0, 10, 15, 20],
+    [10, 0, 35, 25],
+    [15, 35, 0, 30],
+    [20, 25, 30, 0]
+]
+
+# Visited array
+visited = [False] * n
+visited[0] = True  # Start from node 0
+
+# Start TSP with starting path [0]
+tsp(graph, visited, 0, 1, 0, [0])
+
+# Print result
+print("Minimum cost:", min_cost)
+print("Minimum cost path:", min_path)
+
+--------------------------------------------------------------------------------------------------------------
+
+Practical 3 : A* search algorithm
+
+import heapq
+
+# A* Algorithm Implementation
+def a_star_search(graph, start, goal, heuristic):
+    # Priority queue: stores (f(n), node, path, g(n))
+    open_list = [(heuristic[start], start, [start], 0)]
+    visited = set()
+
+    while open_list:
+        f, node, path, g = heapq.heappop(open_list)
+
+        # If goal found
+        if node == goal:
+            return path, g
+
+        if node in visited:
+            continue
+        visited.add(node)
+
+        # Explore neighbors
+        for neighbor, cost in graph[node].items():
+            if neighbor not in visited:
+                g_new = g + cost
+                f_new = g_new + heuristic[neighbor]
+                heapq.heappush(open_list, (f_new, neighbor, path + [neighbor], g_new))
+
+    return None, float("inf")   # No path found
+
+# Graph as adjacency list with edge costs
+graph = {
+    'A': {'B': 1, 'C': 3},
+    'B': {'D': 3, 'E': 1},
+    'C': {'F': 5},
+    'D': {},
+    'E': {'F': 2},
+    'F': {}
+}
+
+# Heuristic values (straight-line estimates to goal 'F')
+heuristic = {
+    'A': 6,
+    'B': 4,
+    'C': 5,
+    'D': 3,
+    'E': 2,
+    'F': 0
+}
+
+# Run A*
+path, cost = a_star_search(graph, 'A', 'F', heuristic)
+
+print("Optimal Path:", path)
+print("Total Cost:", cost)
+
+--------------------------------------------------------------------------------------------------------------
+
+Practical 4 : AO* search algorithm
+
+# AO* Algorithm
+
+def get_neighbors(graph, node):
+    return graph.get(node, [])
+
+def compute_min_cost_child_nodes(graph, heuristic, node):
+    neighbors = get_neighbors(graph, node)
+    if not neighbors:  # Goal node
+        return heuristic[node], []
+
+    min_cost = float('inf')
+    best_child_group = None
+
+    for child_group in neighbors:   # Each group = [(child, cost), ...]
+        cost = 0
+        for child, edge_cost in child_group:
+            cost += edge_cost + heuristic[child]   # f = g + h
+        if cost < min_cost:
+            min_cost = cost
+            best_child_group = child_group
+
+    return min_cost, best_child_group
+
+def ao_star(graph, heuristic, start, goals):
+    status = {}                                  #Tracks whether a node is solved ("Solved") or not yet.
+    solution = {}                                #For each node, stores the chosen best child-group (list of children) giving the currently best solution.
+    parent = {}                                  #can backtrack and update parents when a child’s cost changes / becomes solved.
+
+    def recursive_ao(node, backtracking=False):
+        print(f"Processing node: {node}")
+
+        if node in goals:  # Goal node
+            status[node] = "Solved"
+            return
+
+        cost, child_group = compute_min_cost_child_nodes(graph, heuristic, node)
+        heuristic[node] = cost
+        solution[node] = [child for child, _ in child_group]
+
+        for child, _ in child_group:
+            parent[child] = node
+
+        solved = True
+        for child, _ in child_group:
+            if child not in status or status[child] != "Solved":
+                solved = False
+
+        if solved:
+            status[node] = "Solved"
+
+        if not backtracking:  # Expand children -forward move
+            for child, _ in child_group:
+                recursive_ao(child, backtracking=True)
+
+        if parent.get(node):  # Backtrack
+            recursive_ao(parent[node], backtracking=True)
+
+    recursive_ao(start)
+    return solution
+
+
+# ---------------- Example ----------------
+graph = {
+    'A': [[('B', 1), ('C', 1)], [('D', 1)]],   # A → (B,C) OR D
+    'B': [[('E', 1)], [('F', 1)]],             # B → E OR F
+    'C': [[('G', 1)]],                         # C → G
+    'D': [[('H', 1)]]                          # D → H
+}
+
+heuristic = {
+    'A': 10, 'B': 6, 'C': 4, 'D': 2,
+    'E': 0, 'F': 0, 'G': 0, 'H': 0   # Goal nodes
+}
+
+goals = {'E', 'F', 'G', 'H'}
+
+solution = ao_star(graph, heuristic, 'A', goals)
+
+print("\nOptimal Solution Graph:")
+for node in solution:
+    print(f"{node} -> {solution[node]}")
+
+
+--------------------------------------------------------------------------------------------------------------
+
+Practical 5 : Steepest hill climb using TSP
+
+import random
+
+# Function to calculate total cost of a path
+def path_cost(graph, path):
+    cost = 0
+    n = len(path)
+    for i in range(n - 1):
+        cost += graph[path[i]][path[i + 1]]
+    cost += graph[path[-1]][path[0]]  # return to start
+    return cost
+
+# Generate all possible neighbors (by swapping two cities)
+def get_neighbors(path):
+    neighbors = []
+    n = len(path)
+    for i in range(1, n):          # avoid swapping the start city (0)
+        for j in range(i + 1, n):
+            new_path = path[:]
+            new_path[i], new_path[j] = new_path[j], new_path[i]  # swap
+            neighbors.append(new_path)
+    return neighbors
+
+# Steepest-Ascent Hill Climbing
+def steepest_hill_climb(graph):
+    # Start with a random path
+    n = len(graph)
+    current_path = list(range(n))
+    random.shuffle(current_path)
+    current_cost = path_cost(graph, current_path)
+
+    print("Initial path:", current_path, "Cost:", current_cost)
+
+    while True:
+        neighbors = get_neighbors(current_path)
+
+        # Evaluate all neighbors and pick the best
+        best_neighbor = min(neighbors, key=lambda p: path_cost(graph, p))
+        best_cost = path_cost(graph, best_neighbor)
+
+        if best_cost < current_cost:  # Move to better neighbor
+            current_path, current_cost = best_neighbor, best_cost
+            print("Moving to:", current_path, "Cost:", current_cost)
+        else:
+            # No better neighbor found → Local optimum reached
+            break
+
+    return current_path, current_cost
+
+
+# Example TSP graph (distance matrix)
+graph = [
+    [0, 10, 15, 20],
+    [10, 0, 35, 25],
+    [15, 35, 0, 30],
+    [20, 25, 30, 0]
+]
+
+# Run algorithm
+best_path, best_cost = steepest_hill_climb(graph)
+print("\nFinal Best Path:", best_path, "Cost:", best_cost)
+
+
+--------------------------------------------------------------------------------------------------------------
+
+Practical 6 : TicTacToe Using MinMaxAlgorithm
+
+import math
+
+# Initialize board
+board = [" " for _ in range(9)]  # 3x3 board create an empty 3×3 board represented as a list of 9
+
+def print_board(board):
+    """Prints the board in a 3x3 grid."""
+    for row in [board[i*3:(i+1)*3] for i in range(3)]:
+        print("| " + " | ".join(row) + " |")
+
+def available_moves(board):
+    """Return list of available moves (indices that are empty)."""
+    return [i for i, spot in enumerate(board) if spot == " "]
+
+def winner(board):
+    """Check if there's a winner."""
+    win_combos = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],  # rows
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],  # cols
+        [0, 4, 8], [2, 4, 6]              # diagonals
+    ]
+    for combo in win_combos:
+        if board[combo[0]] == board[combo[1]] == board[combo[2]]
+        and board[combo[0]] != " ":
+            return board[combo[0]]
+    return None
+
+def is_full(board):
+    """Check if the board is full."""
+    return " " not in board
+
+def minimax(board, depth, is_maximizing):
+    """Minimax algorithm where Computer is 'X' and Human is 'O'."""
+    if winner(board) == "X":  # Computer wins
+        return 1
+    elif winner(board) == "O":  # Human wins
+        return -1
+    elif is_full(board):
+        return 0  # Draw
+
+    if is_maximizing:
+        best_score = -math.inf
+        for move in available_moves(board):
+            board[move] = "X"   # Computer plays
+            score = minimax(board, depth + 1, False)
+            board[move] = " "
+            best_score = max(best_score, score)
+        return best_score
+    else:
+        best_score = math.inf
+        for move in available_moves(board):
+            board[move] = "O"   # Human plays
+            score = minimax(board, depth + 1, True)
+            board[move] = " "
+            best_score = min(best_score, score)
+        return best_score
+
+def best_move(board):
+    """Find the best move for Computer (X)."""
+    best_score = -math.inf
+    move = None
+    for i in available_moves(board):
+        board[i] = "X"
+        score = minimax(board, 0, False)
+        board[i] = " "
+        if score > best_score:
+            best_score = score
+            move = i
+    return move
+
+def play_game():
+    """Main game loop."""
+    print("Welcome to Tic Tac Toe!")
+    print("Computer: X  |  Human: O")
+    print_board(board)
+
+    while True:
+        # Computer turn
+        ai_move = best_move(board)
+        board[ai_move] = "X"
+        print("\nComputer plays:")
+        print_board(board)
+
+        if winner(board):
+            print("Computer (X) wins!")
+            break
+        elif is_full(board):
+            print("It's a draw!")
+            break
+
+        # Human turn
+        human_move = int(input("\nEnter your move (0-8): "))
+        if board[human_move] != " ":
+            print("Invalid move. Try again.")
+            continue
+        board[human_move] = "O"
+
+        if winner(board):
+            print_board(board)
+            print("You (O) win!")
+            break
+        elif is_full(board):
+            print_board(board)
+            print("It's a draw!")
+            break
+
+# Run the game
+if __name__ == "__main__":
+    play_game()
+
+
+--------------------------------------------------------------------------------------------------------------
+
+
+Practical 7 : KNN using Iris Dataset
+
+
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+
+# 1. Load the Iris dataset
+iris = load_iris()
+X = iris.data       # features
+y = iris.target     # labels (0,1,2)
+
+# 2. Split dataset into training (70%) and testing (30%)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# 3. Create k-NN classifier (k = 5)
+knn = KNeighborsClassifier(n_neighbors=5)
+
+# 4. Train the classifier
+knn.fit(X_train, y_train)
+
+# 5. Make predictions
+y_pred = knn.predict(X_test)
+
+# 6. Print results: correct vs wrong predictions
+print("=== Predictions ===")
+for i in range(len(y_test)):
+    if y_test[i] == y_pred[i]:
+        print(f"Correct:  Predicted = {iris.target_names[y_pred[i]]}, Actual = {iris.target_names[y_test[i]]}")
+    else:
+        print(f"Wrong:    Predicted = {iris.target_names[y_pred[i]]}, Actual = {iris.target_names[y_test[i]]}")
+
+--------------------------------------------------------------------------------------------------------------
+
+Practical 8 : Decision Tree Classifier on Iris Dataset 
+
+
+# Import necessary libraries
+import pandas as pd
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+import matplotlib.pyplot as plt
+
+# Load the Iris dataset
+iris = load_iris()
+
+# Convert to DataFrame for easier handling
+df = pd.DataFrame(iris.data, columns=iris.feature_names)
+df['species'] = iris.target
+
+print("First five rows of the dataset:\n")
+print(df.head())
+
+# Define features (X) and target (y)
+X = df.iloc[:, :-1]   # (select all rows, select all columns except last one )
+y = df['species']     # target column
+
+# Split the dataset into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Make predictions
+y_pred = model.predict(X_test)
+
+
+# Evaluate the model
+print("\nModel Evaluation:")
+print("-----------------")
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("\nConfusion Matrix:\n", confusion_matrix(y_test, y_pred))
+print("\nClassification Report:\n", classification_report
+ (y_test, y_pred, target_names=iris.target_names))
+
+# Visualize the Decision Tree
+plt.figure(figsize=(12,8))
+plot_tree(model,
+          feature_names=iris.feature_names,
+          class_names=iris.target_names,
+          filled=True,
+          rounded=True)
+plt.title("Decision Tree Classifier for Iris Dataset", fontsize=14)
+plt.show()
+
+# Predict on new data
+sample = [[5.1, 3.5, 1.4, 0.2]]  # Example input
+pred = model.predict(sample)
+print("\nPrediction for sample {}: {}".format(sample, iris.target_names[pred][0]))
+
+--------------------------------------------------------------------------------------------------------------
+
+Practical 9 : Backward Chaining 
+
+# Backward Chaining in Python
+
+# Knowledge Base: Rules and Facts
+rules = {
+    "cold": ["fever"],                           # IF fever THEN cold
+    "fever": ["infection"],                      # IF infection THEN fever
+    "infection": ["virus", "bacteria"],          # IF virus AND bacteria THEN infection
+    "headache": ["fever"],                       # IF fever THEN headache
+}
+
+facts = ["virus", "bacteria"]  # known facts
+
+def backward_chaining(goal, rules, facts, derived=None):
+    """
+    Backward chaining algorithm to check if goal can be derived
+    from rules and known facts.
+    """
+    if derived is None:
+        derived = set()
+
+    # If goal is already known fact
+    if goal in facts:
+        print(f"✔ Goal '{goal}' is a known fact.")
+        return True
+
+    # Prevent infinite loops
+    if goal in derived:
+        return False
+
+    derived.add(goal)
+
+    # Find rules that conclude the goal
+    if goal in rules:
+        premises = rules[goal]  # conditions that lead to goal
+        print(f"Trying to prove '{goal}' using rule: IF {premises} THEN {goal}")
+
+        # Check if all premises are true (recursively)
+        all_true = True
+        for premise in premises:
+            if not backward_chaining(premise, rules, facts, derived):
+                all_true = False
+                break
+
+        if all_true:
+            print(f"✅ Goal '{goal}' is proved.")
+            return True
+
+    print(f"❌ Cannot prove '{goal}'.")
+    return False
+
+
+# --------------------------
+# Example Execution
+# --------------------------
+
+goal = "cold"
+print("\nBackward Chaining Reasoning:\n")
+result = backward_chaining(goal, rules, facts)
+
+if result:
+    print(f"\n✅ The goal '{goal}' can be proved from the given facts.")
+else:
+    print(f"\n❌ The goal '{goal}' cannot be proved from the given facts.")
+
+
+--------------------------------------------------------------------------------------------------------------
+
+Practical no 10 : Bayesian Network
+
+# -------------------------------------------------------
+# Bayesian Network for Heart Disease Diagnosis
+# Using Cleveland Heart Disease Dataset
+# -------------------------------------------------------
+
+!pip install pgmpy==0.1.25
+import pandas as pd
+from pgmpy.models import BayesianModel
+from pgmpy.estimators import MaximumLikelihoodEstimator
+from pgmpy.inference import VariableElimination
+from sklearn.preprocessing import KBinsDiscretizer
+
+# Step 1: Load Dataset
+df = pd.read_csv("Cleveland_hd.csv")  # Cleveland dataset
+print("Dataset loaded successfully!")
+print(df.head())
+
+# Step 2: Preprocess Data
+df['target'] = df['target'].apply(lambda x: 1 if x > 0 else 0)
+
+# Select attributes
+data = df[['age', 'sex', 'cp', 'chol', 'trestbps', 'fbs', 'target']]
+
+# Discretize continuous attributes
+discretizer = KBinsDiscretizer(n_bins=3, encode='ordinal', strategy='uniform')
+data.loc[:, ['age', 'chol', 'trestbps']] = discretizer.fit_transform(
+    data[['age', 'chol', 'trestbps']]
+)
+
+# Rename target
+data.rename(columns={'target': 'heart_disease'}, inplace=True)
+
+print("\nPreprocessed Data:")
+print(data.head())
+
+# Step 3: Define Bayesian Network Structure
+model = BayesianModel([
+    ('age', 'trestbps'),
+    ('age', 'chol'),
+    ('sex', 'heart_disease'),
+    ('cp', 'heart_disease'),
+    ('trestbps', 'heart_disease'),
+    ('chol', 'heart_disease'),
+    ('fbs', 'heart_disease')
+])
+
+# Step 4: Train Model
+model.fit(data, estimator=MaximumLikelihoodEstimator)
+print("\nModel learned successfully!")
+
+# Step 5: Inference
+inference = VariableElimination(model)
+
+# Example queries
+q1 = inference.query(variables=['heart_disease'], evidence={'chol': 2})
+print("\nP(Heart Disease | High Cholesterol):")
+print(q1)
+
+q2 = inference.query(variables=['heart_disease'], evidence={'cp': 2, 'fbs': 1})
+print("\nP(Heart Disease | Chest Pain & High FBS):")
+print(q2)
+
